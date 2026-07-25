@@ -71,6 +71,16 @@ export default function VendorDashboardPage() {
     }
   }
 
+  async function removeService(serviceId) {
+    if (!confirm("Remove this package? This can't be undone.")) return;
+    try {
+      await api.delete(`/services/${serviceId}`);
+      setServices((prev) => prev.filter((s) => s.id !== serviceId));
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
   const pending = bookings.filter((b) => b.status === "pending");
   const earnings = bookings
     .filter((b) => b.status === "completed")
@@ -159,6 +169,12 @@ export default function VendorDashboardPage() {
                     </span>
                   </div>
                   {s.description && <p className="mt-1 text-xs text-ink-soft">{s.description}</p>}
+                  <button
+                    onClick={() => removeService(s.id)}
+                    className="focus-ring mt-2 text-xs text-ink-soft underline hover:text-rani"
+                  >
+                    Remove
+                  </button>
                 </div>
               </div>
             ))}
