@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background-color: #FBF6F4;
+  color: #241026;
+}
+
+/* Signature shape: an elliptical "gateway" arch over vendor photos —
+   a nod to a mandap/doorway silhouette, used consistently wherever a
+   vendor or event photo appears (cards, profile hero). */
+.arch-frame {
+  border-radius: 50% 50% 12px 12px / 40% 40% 12px 12px;
+  overflow: hidden;
+}
+
+.focus-ring:focus-visible {
+  outline: 2px solid #E8A73B;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

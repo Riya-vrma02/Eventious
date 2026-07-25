@@ -1,0 +1,202 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  customer
+  vendor
+  admin
+}
+
+enum PriceType {
+  fixed
+  per_guest
+  per_hour
+}
+
+enum BookingStatus {
+  pending
+  confirmed
+  in_progress
+  completed
+  declined
+  cancelled
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  refunded
+  failed
+}
+
+enum DisputeStatus {
+  open
+  resolved
+  rejected
+}
+
+model User {
+  id            String          @id @default(uuid())
+  name          String
+  email         String          @unique
+  passwordHash  String
+  role          Role            @default(customer)
+  phone         String?
+  city          String?
+  createdAt     DateTime        @default(now())
+
+  vendorProfile VendorProfile?
+  events        Event[]
+  reviews       Review[]
+
+  conversationsAsCustomer Conversation[] @relation("CustomerConversations")
+  messages                Message[]
+  disputesRaised          Dispute[]      @relation("DisputeRaisedBy")
+}
+
+model VendorProfile {
+  id            String            @id @default(uuid())
+  userId        String            @unique
+  user          User              @relation(fields: [userId], references: [id])
+  businessName  String
+  description   String?
+  categoryId    String
+  category      ServiceCategory   @relation(fields: [categoryId], references: [id])
+  city          String?
+  photoUrl      String?
+  verified      Boolean           @default(false)
+  ratingAvg     Float             @default(0)
+
+  services      Service[]
+  availability  Availability[]
+  bookings      Booking[]
+  conversations Conversation[]
+}
+model ServiceCategory {
+  id             String          @id @default(uuid())
+  name           String          @unique
+  commissionRate Decimal         @default(10) // percentage the platform takes on bookings in this category
+  vendors        VendorProfile[]
+  services       Service[]
+}
+
+model Service {
+  id          String          @id @default(uuid())
+  vendorId    String
+  vendor      VendorProfile   @relation(fields: [vendorId], references: [id])
+  categoryId  String
+  category    ServiceCategory @relation(fields: [categoryId], references: [id])
+  title       String
+  description String?
+  imageUrl    String?
+  price       Decimal
+  priceType   PriceType       @default(fixed)
+
+  bookings    Booking[]
+}
+
+model Availability {
+  id        String        @id @default(uuid())
+  vendorId  String
+  vendor    VendorProfile @relation(fields: [vendorId], references: [id])
+  date      DateTime
+  isBlocked Boolean       @default(false)
+
+  @@unique([vendorId, date])
+}
+
+model Event {
+  id          String    @id @default(uuid())
+  customerId  String
+  customer    User      @relation(fields: [customerId], references: [id])
+  eventType   String
+  eventDate   DateTime
+  guestCount  Int?
+  budget      Decimal?
+  status      String    @default("planning")
+  createdAt   DateTime  @default(now())
+
+  bookings    Booking[]
+}
+
+model Booking {
+  id            String        @id @default(uuid())
+  eventId       String
+  event         Event         @relation(fields: [eventId], references: [id])
+  vendorId      String
+  vendor        VendorProfile @relation(fields: [vendorId], references: [id])
+  serviceId     String
+  service       Service       @relation(fields: [serviceId], references: [id])
+  status        BookingStatus @default(pending)
+  amount        Decimal
+  advancePaid   Decimal       @default(0)
+  createdAt     DateTime      @default(now())
+
+  payment       Payment?
+  review        Review?
+  dispute       Dispute?
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  bookingId      String        @unique
+  booking        Booking       @relation(fields: [bookingId], references: [id])
+  amount         Decimal
+  status         PaymentStatus @default(pending)
+  transactionId  String?
+  createdAt      DateTime      @default(now())
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  bookingId String   @unique
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+}
+
+model Conversation {
+  id         String        @id @default(uuid())
+  customerId String
+  customer   User          @relation("CustomerConversations", fields: [customerId], references: [id])
+  vendorId   String
+  vendor     VendorProfile @relation(fields: [vendorId], references: [id])
+  createdAt  DateTime      @default(now())
+
+  messages   Message[]
+
+  @@unique([customerId, vendorId])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id])
+  body           String
+  createdAt      DateTime     @default(now())
+}
+
+model Dispute {
+  id          String        @id @default(uuid())
+  bookingId   String        @unique
+  booking     Booking       @relation(fields: [bookingId], references: [id])
+  raisedById  String
+  raisedBy    User          @relation("DisputeRaisedBy", fields: [raisedById], references: [id])
+  reason      String
+  status      DisputeStatus @default(open)
+  resolution  String?
+  createdAt   DateTime      @default(now())
+  resolvedAt  DateTime?
+}
