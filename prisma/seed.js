@@ -1,24 +1,12 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaNeon } from "@prisma/adapter-neon";
 
-const prisma = new PrismaClient();
+const globalForPrisma = globalThis;
 
-async function main() {
-  const categories = ["Catering", "Photography", "Decor", "Venues", "Event managers", "DJ & music", "Makeup & styling"];
+const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL });
 
-  for (const name of categories) {
-    await prisma.serviceCategory.upsert({
-      where: { name },
-      update: {},
-      create: { name },
-    });
-  }
+export const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter });
 
-  console.log(`Seeded ${categories.length} categories`);
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prisma;
 }
-
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
